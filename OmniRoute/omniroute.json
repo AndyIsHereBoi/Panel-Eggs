@@ -1,0 +1,105 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v1",
+        "update_url": null
+    },
+    "exported_at": "2026-11-16T11:46:00-06:00",
+    "name": "OmniRoute AI Gateway",
+    "author": "andy@andyishereboi.com",
+    "description": "Prebuilt self-hosted AI/LLM proxy gateway, multi-provider router, and token analytics dashboard powered by Node.js and embedded SQLite.",
+    "features": null,
+    "docker_images": {
+        "Node.js 24": "ghcr.io/parkervcp/yolks:nodejs_24",
+        "Node.js 22": "ghcr.io/parkervcp/yolks:nodejs_22"
+    },
+    "file_denylist": [],
+    "startup": "./start.sh",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"OmniRoute is running!\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -e\ncd /mnt/server\nmkdir -p /mnt/server/data\n\nrm -rf /mnt/server/.git /mnt/server/.next /mnt/server/src /mnt/server/open-sse /mnt/server/packages /mnt/server/electron /mnt/server/node_modules /mnt/server/package.json /mnt/server/package-lock.json /mnt/server/.built_commit\n\ncat << 'EOF' > /mnt/server/start.sh\n#!/bin/bash\nset -e\n\ncd /home/container\nmkdir -p /home/container/data\n\nexport NODE_ENV=production\nexport PORT=${SERVER_PORT}\nexport OMNIROUTE_PORT=${SERVER_PORT}\nexport HOSTNAME=0.0.0.0\nexport OMNIROUTE_SERVER_HOST=0.0.0.0\nexport DATA_DIR=/home/container/data\nexport HOME=/home/container\nexport NPM_CONFIG_PREFIX=/home/container/.npm-global\nexport PATH=\"/home/container/.npm-global/bin:$PATH\"\nexport NODE_OPTIONS=\"--max-old-space-size=${MEMORY_MB}\"\n\n# Auto-generate secrets into .env on first boot if still blank\nif [ ! -f .env ]; then\n    touch .env\nfi\n\nif [ -z \"$JWT_SECRET\" ] && ! grep -q \"^JWT_SECRET=\" .env; then\n    echo \"JWT_SECRET=$(node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\")\" >> .env\nfi\n\nif [ -z \"$API_KEY_SECRET\" ] && ! grep -q \"^API_KEY_SECRET=\" .env; then\n    echo \"API_KEY_SECRET=$(node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\")\" >> .env\nfi\n\nset -a\nsource .env\nset +a\n\nINSTALLED_VER=$(node -e \"try{console.log(require('/home/container/.npm-global/lib/node_modules/omniroute/package.json').version)}catch(e){}\" 2>/dev/null || echo \"\")\n\nif [ -z \"$INSTALLED_VER\" ] || [ \"$AUTO_UPDATE\" = \"true\" ]; then\n    echo \"[OmniRoute] Installing prebuilt omniroute@${OMNIROUTE_VERSION} package...\"\n    npm install -g \"omniroute@${OMNIROUTE_VERSION}\" --no-audit --no-fund\nfi\n\necho \"[OmniRoute] Starting prebuilt gateway and dashboard on 0.0.0.0:${PORT}...\"\nexec omniroute --port \"${PORT}\"\nEOF\n\nchmod +x /mnt/server/start.sh\necho \"OmniRoute prebuilt launcher installed.\"",
+            "container": "node:22-bookworm",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "OmniRoute npm Version",
+            "description": "npm dist-tag or exact version of the prebuilt omniroute package (e.g., latest or 3.8.53).",
+            "env_variable": "OMNIROUTE_VERSION",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:32"
+        },
+        {
+            "name": "Auto-Update on Boot",
+            "description": "Set to true to check and install the specified OMNIROUTE_VERSION every time the server starts.",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Require API Key on /v1/*",
+            "description": "Enforce generated virtual API keys for all proxy requests (strongly recommended).",
+            "env_variable": "REQUIRE_API_KEY",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        },
+        {
+            "name": "Node Heap Limit (MB)",
+            "description": "V8 max-old-space-size in MB. 768 MB works comfortably inside a 1024-1536 MB container.",
+            "env_variable": "MEMORY_MB",
+            "default_value": "768",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:384|max:32768"
+        },
+        {
+            "name": "JWT Secret",
+            "description": "Session signing secret. Leave blank to auto-generate a secure 48-byte key in .env on first start.",
+            "env_variable": "JWT_SECRET",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string"
+        },
+        {
+            "name": "API Key Secret",
+            "description": "Encryption/signing secret for generated virtual API keys. Leave blank to auto-generate on first start.",
+            "env_variable": "API_KEY_SECRET",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string"
+        },
+        {
+            "name": "Initial Dashboard Password",
+            "description": "Optional initial admin password for the web UI (if unset, set it on first visit in the browser).",
+            "env_variable": "INITIAL_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string"
+        },
+        {
+            "name": "Disable SQLite Auto-Backup",
+            "description": "Set to true if you handle backups externally via Pterodactyl panel backups.",
+            "env_variable": "DISABLE_SQLITE_AUTO_BACKUP",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false"
+        }
+    ]
+}
