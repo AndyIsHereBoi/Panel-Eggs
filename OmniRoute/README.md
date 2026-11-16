@@ -1,7 +1,7 @@
 ## OmniRoute Egg
 
 ### Resource Requirements
-| During Install | Regular Running |
+| First Startup | Regular Running |
 |----------------|-----------------|
 | 2GB Ram, 200% CPU | 1GB Ram, 100% CPU |
 
